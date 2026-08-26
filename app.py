@@ -11,7 +11,13 @@ from web.routes import bp as web_bp
 def create_app() -> Flask:
     Config.validate()
 
-    app = Flask(__name__)
+    # There's no top-level static/ directory - all static assets belong
+    # to the web blueprint (web/static/). Flask's own default static
+    # route would otherwise register at the same /static/<path:filename>
+    # URL as the blueprint's and win (it's added first), 404ing every
+    # asset the blueprint actually serves - including translate.js,
+    # which silently breaks the translate page's JS-driven submit flow.
+    app = Flask(__name__, static_folder=None)
     # Zeabur terminates TLS at its edge proxy and forwards plain HTTP to
     # this container, so without this Flask sees every request as http
     # and url_for(..., _external=True) (used for the OAuth redirect_uri)
