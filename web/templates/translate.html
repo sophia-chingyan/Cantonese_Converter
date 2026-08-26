@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Translate · 粵文 Converter{% endblock %}
+{% block content %}
+
+<form id="translate-form" class="panel" autocomplete="off">
+  <div class="panel-head">
+    <p class="eyebrow">書面語 → 粵文</p>
+    <h1>Translate</h1>
+  </div>
+
+  <div class="field-row">
+    <label for="provider-select">Provider</label>
+    <select id="provider-select" name="provider">
+      {% for p in providers %}
+      <option value="{{ p }}" {{ 'selected' if p == provider else '' }}>
+        {{ 'Poe (GPT-5.6-Luna)' if p == 'poe' else 'Gemini (gemini-3.1-flash-lite)' }}
+      </option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div class="field-stack">
+    <label for="pasted-text">Paste text</label>
+    <textarea id="pasted-text" name="pasted_text" rows="8"
+      placeholder="貼上書面語文字…"></textarea>
+  </div>
+
+  <div class="field-stack">
+    <label for="file-input">…or upload a file</label>
+    <input id="file-input" name="file" type="file" accept=".txt,.srt,.docx">
+    <p class="field-hint">.txt, .srt, or .docx</p>
+  </div>
+
+  <div id="form-error" class="alert alert-error" hidden></div>
+
+  <button id="translate-btn" class="btn btn-primary" type="submit">Translate</button>
+</form>
+
+<section id="progress-panel" class="panel" hidden>
+  <div class="panel-head">
+    <p class="eyebrow">Processing</p>
+    <h2 id="progress-heading">Translating…</h2>
+  </div>
+  <div id="cue-strip" class="cue-strip" aria-live="polite"></div>
+  <p id="progress-note" class="field-hint"></p>
+</section>
+
+<section id="output-panel" class="panel" hidden>
+  <div class="panel-head">
+    <p class="eyebrow">粵文</p>
+    <h2>Review &amp; edit</h2>
+  </div>
+
+  <div id="failure-banner" class="alert alert-warning" hidden>
+    Some sections couldn't be translated — look for the ⚠️ marker below and fix them by hand before saving.
+  </div>
+
+  <label for="output-text" class="sr-only">Translated text (editable)</label>
+  <textarea id="output-text" class="output-text" rows="16" spellcheck="false"></textarea>
+
+  <div class="save-row">
+    <button id="save-btn" class="btn btn-primary" type="button">Save</button>
+    <span id="save-status" class="save-status" aria-live="polite"></span>
+  </div>
+</section>
+
+<script src="{{ url_for('web.static', filename='js/translate.js') }}"></script>
+{% endblock %}

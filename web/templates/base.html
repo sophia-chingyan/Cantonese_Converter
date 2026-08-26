@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}粵文 Converter{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Noto+Serif+TC:wght@400;600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('web.static', filename='css/style.css') }}">
+</head>
+<body>
+  {% if session.get('user_email') %}
+  <header class="topbar">
+    <a class="wordmark" href="{{ url_for('web.translate_page') }}">
+      粵文<span class="wordmark-sub">converter</span>
+    </a>
+    <nav class="topnav">
+      <a href="{{ url_for('web.translate_page') }}"
+         class="{{ 'is-active' if request.endpoint == 'web.translate_page' else '' }}">Translate</a>
+      <a href="{{ url_for('web.files_page') }}"
+         class="{{ 'is-active' if request.endpoint == 'web.files_page' else '' }}">Files</a>
+      <a href="{{ url_for('web.logout_route') }}" class="topnav-logout">Sign out</a>
+    </nav>
+  </header>
+  {% endif %}
+  <main class="shell">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

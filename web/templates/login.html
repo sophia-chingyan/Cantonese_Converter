@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Sign in · 粵文 Converter{% endblock %}
+{% block content %}
+<section class="login-card">
+  <p class="eyebrow">書面語 → 粵文</p>
+  <h1 class="login-title">粵文 Converter</h1>
+  <p class="login-copy">
+    A personal tool for converting written Chinese into genuine written
+    Cantonese. Sign in with the Google account this app is configured for.
+  </p>
+  {% if error %}
+  <p class="login-error" role="alert">{{ error }}</p>
+  {% endif %}
+  <a class="btn btn-primary" href="{{ url_for('web.auth_google') }}">Sign in with Google</a>
+</section>
+{% endblock %}

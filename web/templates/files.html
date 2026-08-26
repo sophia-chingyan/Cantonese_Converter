@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Files · 粵文 Converter{% endblock %}
+{% block content %}
+
+<section class="panel">
+  <div class="panel-head">
+    <p class="eyebrow">Saved output</p>
+    <h1>Files</h1>
+  </div>
+
+  {% if files %}
+  <table class="ledger">
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Saved</th>
+        <th scope="col">Size</th>
+        <th scope="col"><span class="sr-only">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for f in files %}
+      <tr>
+        <td class="ledger-name">{{ f.name }}</td>
+        <td class="ledger-mono" data-timestamp="{{ f.mtime }}">—</td>
+        <td class="ledger-mono">{{ "%.1f"|format(f.size / 1024) }} KB</td>
+        <td class="ledger-actions">
+          <a class="btn-link" href="{{ url_for('web.download_file', filename=f.name) }}">Download</a>
+          <form method="post" action="{{ url_for('web.delete_file', filename=f.name) }}"
+                onsubmit="return confirm('Delete {{ f.name }}? This can\'t be undone.');">
+            <button class="btn-link btn-link-danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state">
+    No saved files yet. Translate something and save it — it'll show up here.
+  </p>
+  {% endif %}
+</section>
+
+<script>
+  // Render each row's timestamp in the visitor's own timezone, since the
+  // server only knows raw epoch seconds.
+  document.querySelectorAll('.ledger-mono[data-timestamp]').forEach(function (cell) {
+    var ts = parseFloat(cell.getAttribute('data-timestamp'));
+    if (!isNaN(ts)) {
+      var d = new Date(ts * 1000);
+      cell.textContent = d.toLocaleString();
+    }
+  });
+</script>
+{% endblock %}
