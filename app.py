@@ -1,6 +1,7 @@
 import os
 
 from flask import Flask, jsonify
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from config import Config
 from auth import init_oauth
@@ -11,6 +12,12 @@ def create_app() -> Flask:
     Config.validate()
 
     app = Flask(__name__)
+    # Zeabur terminates TLS at its edge proxy and forwards plain HTTP to
+    # this container, so without this Flask sees every request as http
+    # and url_for(..., _external=True) (used for the OAuth redirect_uri)
+    # builds an http:// URL that won't match the https:// URI registered
+    # with Google, causing redirect_uri_mismatch.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
     app.config.from_object(Config)
     # Flask's session signing specifically looks for SECRET_KEY.
     app.config["SECRET_KEY"] = Config.FLASK_SECRET_KEY
