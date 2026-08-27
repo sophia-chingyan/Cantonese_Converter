@@ -60,7 +60,12 @@ def _run(job_id, doc: ExtractedDocument, chunks, provider: str, config) -> None:
 
     for chunk in chunks:
         source_text = chunk.source_text()
-        prompt = build_prompt(source_text, previous_context)
+        prompt = build_prompt(
+            source_text,
+            previous_context,
+            kind=chunk.kind,
+            cue_count=len(chunk.cues),
+        )
 
         translated = None
         chunk_ok = True
