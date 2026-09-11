@@ -100,24 +100,61 @@ docker build -t cantonese-converter .
 docker run -p 8080:8080 --env-file .env cantonese-converter
 ```
 
-## Deploy to Zeabur
+## Deploy to Railway
 
-1. Push this repo to GitHub (or connect it however Zeabur expects).
-2. Create a new Zeabur service from the repo - it will detect the
-   `Dockerfile` automatically.
-3. Set every variable from `.env.example` in Zeabur's environment
-   variables panel. Zeabur injects `PORT` itself; you don't need to
-   set it.
-4. Update the Google OAuth redirect URI to your Zeabur domain once
-   it's assigned, and redeploy.
+The repo is Railway-ready: `railway.json` pins the Dockerfile builder,
+the `/healthz` health check, and a single replica.
+
+1. **Create the service.** In [Railway](https://railway.com), create a
+   project and add a service from this GitHub repo. Railway reads
+   `railway.json` and builds the `Dockerfile` — no Nixpacks config
+   needed.
+2. **Set the variables.** Service → Variables → *Raw Editor*, then
+   paste everything from `.env.example` and fill in the values. Don't
+   set `PORT` (Railway injects it) and don't set `OUTPUT_DIR` (see the
+   volume step). The four required ones are `GOOGLE_CLIENT_ID`,
+   `GOOGLE_CLIENT_SECRET`, `ALLOWED_EMAIL`, `FLASK_SECRET_KEY` — the
+   container exits at startup with a clear message if any is missing.
+3. **Generate the domain.** Service → Settings → Networking → *Generate
+   Domain*. Railway detects the exposed port automatically; if it asks,
+   the port is `8080`. You get something like
+   `cantonese-converter-production.up.railway.app`.
+4. **Point Google OAuth at it.** In Google Cloud Console, add
+   `https://<your-railway-domain>/auth/callback` as an authorized
+   redirect URI, then redeploy. (The app trusts Railway's
+   `X-Forwarded-Proto`, so the `redirect_uri` it builds is `https://` —
+   no `redirect_uri_mismatch`.)
+5. **Attach a volume (optional but recommended).** Service → *Create
+   Volume*, mount path `/data`. With a volume attached the app writes
+   saved translations to `<mount path>/outputs` automatically, so the
+   Files page survives redeploys. Without one, saved files live in the
+   container filesystem and are lost on every deploy — the original
+   trade-off below.
+
+### Railway specifics worth knowing
+
+- **Keep it at one replica.** Job progress is tracked in memory
+  (`jobs/registry.py`), and a Railway volume can only attach to one
+  container at a time. `railway.json` sets `numReplicas: 1` and
+  `overlapSeconds: 0` (no overlapping old/new containers during a
+  deploy) for exactly those two reasons.
+- **Health check.** Railway polls `/healthz`, which is deliberately
+  outside the login gate, and won't switch traffic to a new deploy
+  until it answers.
+- **Redeploys interrupt running jobs.** A deploy replaces the
+  container, so an in-flight translation is lost and the browser gets
+  the "server may have restarted" message. Just translate again.
+- **Logs.** Gunicorn access and error logs go to stdout, so they show
+  up in the service's Deploy Logs.
 
 ## What's deliberately not here
 
 Per spec section 4, out of scope for this version:
 
-- No database, no persistent volume. Saved files live in the
-  container's filesystem and are lost on redeploy - this was an
-  explicit trade-off, not an oversight.
+- No database. Saved files are plain files on disk. Attaching a
+  Railway volume (step 5 above) makes them survive redeploys; without
+  one they live in the container filesystem and are lost on redeploy -
+  that was an explicit trade-off, not an oversight.
 - No revision history - only the latest saved version of a file is
   kept, and D6 automatically prunes anything past the
   `FILE_RETENTION_COUNT` most recent files.

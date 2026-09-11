@@ -8,6 +8,26 @@ from auth import init_oauth
 from web.routes import bp as web_bp
 
 
+def _ensure_output_dir(path: str) -> None:
+    """Create the saved-files directory up front, and fail with a message
+    that names the actual problem. On Railway this is usually a volume
+    whose mount path doesn't match OUTPUT_DIR, which would otherwise only
+    surface as a 500 the first time someone clicks Save."""
+    try:
+        os.makedirs(path, exist_ok=True)
+    except OSError as exc:
+        raise RuntimeError(
+            f"Cannot create OUTPUT_DIR {path!r}: {exc}. On Railway, either "
+            "attach a volume and point OUTPUT_DIR inside its mount path, or "
+            "leave OUTPUT_DIR unset to use the container filesystem."
+        ) from exc
+
+    if not os.access(path, os.W_OK):
+        raise RuntimeError(
+            f"OUTPUT_DIR {path!r} is not writable by this process."
+        )
+
+
 def create_app() -> Flask:
     Config.validate()
 
@@ -18,7 +38,7 @@ def create_app() -> Flask:
     # asset the blueprint actually serves - including translate.js,
     # which silently breaks the translate page's JS-driven submit flow.
     app = Flask(__name__, static_folder=None)
-    # Zeabur terminates TLS at its edge proxy and forwards plain HTTP to
+    # Railway terminates TLS at its edge proxy and forwards plain HTTP to
     # this container, so without this Flask sees every request as http
     # and url_for(..., _external=True) (used for the OAuth redirect_uri)
     # builds an http:// URL that won't match the https:// URI registered
@@ -29,7 +49,7 @@ def create_app() -> Flask:
     app.config["SECRET_KEY"] = Config.FLASK_SECRET_KEY
     app.config["MAX_CONTENT_LENGTH"] = Config.MAX_UPLOAD_MB * 1024 * 1024
 
-    os.makedirs(Config.OUTPUT_DIR, exist_ok=True)
+    _ensure_output_dir(Config.OUTPUT_DIR)
 
     init_oauth(app)
     app.register_blueprint(web_bp)
