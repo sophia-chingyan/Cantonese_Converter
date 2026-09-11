@@ -2,9 +2,9 @@
 Common interface for every input format.
 
 Whatever comes in - pasted text, a .txt upload, an .srt upload, a .docx
-upload - gets normalized into one of two shapes:
+or .pdf upload - gets normalized into one of two shapes:
 
-  * "plain"  - a list of paragraphs (pasted text, .txt, .docx)
+  * "plain"  - a list of paragraphs (pasted text, .txt, .docx, .pdf)
   * "srt"    - a list of Cue objects, each with its own timestamp
 
 Everything downstream (chunker, translator, writer) works off this
@@ -35,7 +35,7 @@ class ExtractedDocument:
     paragraphs: List[str] = field(default_factory=list)
     cues: List[Cue] = field(default_factory=list)
     source_filename: Optional[str] = None
-    source_ext: str = "txt"  # "txt" | "srt" | "docx" -- drives D4 output mapping
+    source_ext: str = "txt"  # "txt" | "srt" | "docx" | "pdf" -- drives D4 output mapping
 
     def is_empty(self) -> bool:
         if self.kind == "srt":
@@ -50,7 +50,8 @@ class ExtractionError(Exception):
 def split_into_paragraphs(text: str) -> List[str]:
     """Split plain text into paragraphs on blank lines. Used by pasted
     text, .txt uploads, and .docx uploads alike so chunking behaves
-    the same regardless of source."""
+    the same regardless of source. (.pdf has its own paragraph
+    reconstruction - see extractors/pdf_extractor.py.)"""
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     # Collapse 3+ newlines to a paragraph break, split on blank lines.
     raw_parts = re.split(r"\n\s*\n", text.strip())

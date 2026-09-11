@@ -4,7 +4,8 @@ from .srt_writer import SrtWriter, format_srt
 
 
 def output_extension_for(source_ext: str) -> str:
-    """D4: output mirrors input, except .docx -> .txt (no .docx writer)."""
+    """D4: output mirrors input, except .docx/.pdf -> .txt (there is
+    no .docx or .pdf writer)."""
     return "srt" if source_ext == "srt" else "txt"
 
 

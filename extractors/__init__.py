@@ -2,11 +2,13 @@ from .base import Cue, ExtractedDocument, ExtractionError, Extractor, split_into
 from .txt_extractor import TxtExtractor, extract_pasted_text
 from .srt_extractor import SrtExtractor
 from .docx_extractor import DocxExtractor
+from .pdf_extractor import PdfExtractor
 
 REGISTRY = {
     "txt": TxtExtractor(),
     "srt": SrtExtractor(),
     "docx": DocxExtractor(),
+    "pdf": PdfExtractor(),
 }
 
 
@@ -16,7 +18,7 @@ def extract_upload(raw_bytes: bytes, filename: str) -> ExtractedDocument:
     extractor = REGISTRY.get(ext)
     if extractor is None:
         raise ExtractionError(
-            f"Unsupported file type '.{ext}'. Supported: .txt, .srt, .docx"
+            f"Unsupported file type '.{ext}'. Supported: .txt, .srt, .docx, .pdf"
         )
     return extractor.extract(raw_bytes, filename)
 
@@ -30,6 +32,7 @@ __all__ = [
     "TxtExtractor",
     "SrtExtractor",
     "DocxExtractor",
+    "PdfExtractor",
     "extract_pasted_text",
     "extract_upload",
     "REGISTRY",

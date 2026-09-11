@@ -5,7 +5,7 @@ Converts standard written Chinese (書面語) into genuine written Cantonese
 few Cantonese words swapped in. Personal, single-user tool. Built from
 the locked System Specification Document (v1.0).
 
-Paste text or upload `.txt` / `.srt` / `.docx`, pick a translation
+Paste text or upload `.txt` / `.srt` / `.docx` / `.pdf`, pick a translation
 provider, review the 粵文 output in the browser, edit it if needed, and
 save it to a file you can download later.
 
@@ -33,7 +33,7 @@ that first output.
 ## Project layout
 
 ```
-extractors/    input parsing - pasted text, .txt, .srt, .docx
+extractors/    input parsing - pasted text, .txt, .srt, .docx, .pdf
 translator/    provider clients (Poe, Gemini), chunker, prompt builder
 writers/       output formatting - .txt, .srt
 auth/          Google OAuth, single-email allowlist
@@ -47,6 +47,46 @@ Each provider is a small client behind one interface
 (`translator/base.py`), so adding the deferred Custom endpoint (D8)
 later means one new file here plus a few form fields - nothing else
 in the app changes.
+
+## File formats
+
+| Upload  | Output | Notes |
+| ------- | ------ | ----- |
+| `.txt`  | `.txt` | UTF-8. |
+| `.srt`  | `.srt` | Indexes and timestamps pass through untouched; only cue text is translated. |
+| `.docx` | `.txt` | Paragraph text only - no tables, headers, or footers. |
+| `.pdf`  | `.txt` | Text-based PDFs only (see below). |
+
+Whatever you upload, the translation lands in the editable box first -
+review and fix it there before saving.
+
+### About PDFs
+
+A PDF stores glyphs at coordinates rather than paragraphs, so
+`extractors/pdf_extractor.py` reconstructs the paragraphs before
+anything is translated: it undoes the hard line wrapping (joining CJK
+lines with no separator and Latin lines with a space, re-joining words
+split across a line break), drops page numbers and running
+headers/footers, and merges a paragraph that runs over a page break.
+That matters because the chunker splits on paragraphs - a page of
+run-on text chunks badly and translates worse.
+
+Two things it can't do:
+
+- **Scans and photos of pages have no text to extract.** If a PDF is
+  images of text, you get a clear error rather than an empty
+  translation - run it through OCR first, or paste the text in.
+- **Password-protected PDFs are rejected.** Remove the password and
+  re-upload. (PDFs encrypted with an empty user password - common for
+  print-restricted files - open fine.)
+
+Complex layouts (multi-column pages, tables, text boxes) come out in
+whatever reading order the PDF declares, which isn't always the one you
+see on screen. Skim the output box before saving.
+
+Uploads of any type are capped by `MAX_UPLOAD_MB` (10 MB by default);
+PDFs are the format most likely to hit it, and the app answers with a
+clear "File too large" message rather than failing obscurely.
 
 ## Setup
 
