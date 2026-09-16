@@ -1,6 +1,6 @@
 class Writer:
     """D4: output format mirrors input (.txt->.txt, .srt->.srt,
-    .docx->.txt). One Writer subclass per output format."""
+    .docx->.txt, .pdf->.txt). One Writer subclass per output format."""
 
     ext = ""
 
