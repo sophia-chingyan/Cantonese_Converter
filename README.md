@@ -5,7 +5,7 @@ Converts standard written Chinese (書面語) into genuine written Cantonese
 few Cantonese words swapped in. Personal, single-user tool. Built from
 the locked System Specification Document (v1.0).
 
-Paste text or upload `.txt` / `.srt` / `.docx`, pick a translation
+Paste text or upload `.txt` / `.srt` / `.docx` / `.pdf`, pick a translation
 provider, review the 粵文 output in the browser, edit it if needed, and
 save it to a file you can download later.
 
@@ -33,7 +33,7 @@ that first output.
 ## Project layout
 
 ```
-extractors/    input parsing - pasted text, .txt, .srt, .docx
+extractors/    input parsing - pasted text, .txt, .srt, .docx, .pdf
 translator/    provider clients (Poe, Gemini), chunker, prompt builder
 writers/       output formatting - .txt, .srt
 auth/          Google OAuth, single-email allowlist
