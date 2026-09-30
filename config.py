@@ -73,7 +73,7 @@ class Config:
     OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "").strip()
 
     # D1: default provider selected when a session has not chosen one yet.
-    DEFAULT_PROVIDER = os.environ.get("DEFAULT_PROVIDER", "poe")
+    DEFAULT_PROVIDER = os.environ.get("DEFAULT_PROVIDER", "poe").strip().lower() or "poe"
 
     # Session cookies: Railway terminates TLS at its edge and serves the
     # public domain over https only, so the cookie can be marked Secure

@@ -26,6 +26,7 @@ def create_job(total_chunks: int, kind: str, source_ext: str, source_filename: O
             "preview_text": None,
             "has_failures": False,
             "error": None,
+            "last_chunk_error": None,  # why the most recent failed chunk failed
         }
     return job_id
 

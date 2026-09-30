@@ -85,7 +85,10 @@ uses the same prompts, chunking, context carryover, retries, and file
 handling as the existing providers. Charges go to the configured
 OpenRouter account. Test a short paragraph to check 粵文 quality before
 converting a whole document. Missing OpenRouter settings are reported
-before a translation job starts.
+before a translation job starts, and any provider whose key or model is
+missing is marked "not configured" in the dropdown. If a chunk fails,
+the warning banner above the output shows the provider's last error
+(for example, an invalid `OPENROUTER_MODEL`).
 
 On Railway, add `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` in the service's
 Variables and redeploy with this version of the code. Optionally set

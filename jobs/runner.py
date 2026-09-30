@@ -8,6 +8,7 @@ a time, in order, in the plain for-loop below. That's what makes D3's
 context carryover possible: each chunk's prompt includes the tail of
 the previous chunk's translated output.
 """
+import re
 import threading
 
 from extractors.base import ExtractedDocument
@@ -47,11 +48,16 @@ def start_job(doc: ExtractedDocument, provider: str, config) -> str:
 
 
 def _run(job_id, doc: ExtractedDocument, chunks, provider: str, config) -> None:
+    # Any unexpected exception in a background thread would otherwise
+    # vanish and leave the browser polling a job stuck on "running".
     try:
-        client = get_client(provider, config)
+        _translate_all(job_id, doc, chunks, provider, config)
     except Exception as exc:  # noqa: BLE001
-        registry.update_job(job_id, status="error", error=str(exc))
-        return
+        registry.update_job(job_id, status="error", error=f"Translation job failed: {exc}")
+
+
+def _translate_all(job_id, doc: ExtractedDocument, chunks, provider: str, config) -> None:
+    client = get_client(provider, config)
 
     previous_context = None
     plain_pieces = []
@@ -72,18 +78,28 @@ def _run(job_id, doc: ExtractedDocument, chunks, provider: str, config) -> None:
         try:
             translated = translate_with_retries(client, prompt)
             previous_context = context_tail(translated, config["CONTEXT_CARRYOVER_CHARS"])
-        except TranslatorError:
+        except TranslatorError as exc:
             chunk_ok = False
+            registry.update_job(job_id, last_chunk_error=str(exc))
             previous_context = None  # don't chain a style anchor off a failure
 
         if chunk.kind == "srt":
             if chunk_ok:
-                segments = [s.strip() for s in translated.split("\n\n")]
+                # Models sometimes separate blocks with extra blank lines
+                # or whitespace-only lines; treat any of those as one break.
+                segments = [s.strip() for s in re.split(r"\n[ \t]*\n\s*", translated.strip())]
                 if len(segments) != len(chunk.cues):
                     # Can't safely map segments back to individual cues -
                     # keep every cue's original text rather than risk
                     # attaching translated text to the wrong timestamp.
                     chunk_ok = False
+                    registry.update_job(
+                        job_id,
+                        last_chunk_error=(
+                            f"Model returned {len(segments)} subtitle blocks "
+                            f"for {len(chunk.cues)} cues."
+                        ),
+                    )
             if chunk_ok:
                 for cue, seg in zip(chunk.cues, segments):
                     srt_cue_results.append((cue, seg))

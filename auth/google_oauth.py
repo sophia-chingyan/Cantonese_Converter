@@ -6,7 +6,7 @@ against Google's well-known configuration.
 from functools import wraps
 
 from authlib.integrations.flask_client import OAuth
-from flask import redirect, session, url_for, abort
+from flask import jsonify, redirect, request, session, url_for
 
 oauth = OAuth()
 
@@ -27,6 +27,11 @@ def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not session.get("user_email"):
+            # The translate page calls /api/* via fetch(); a redirect to
+            # the HTML login page would surface there as a JSON parse
+            # error instead of telling the person to sign in again.
+            if request.path.startswith("/api/"):
+                return jsonify({"error": "Your session has expired. Please sign in again."}), 401
             return redirect(url_for("web.login"))
         return view(*args, **kwargs)
 

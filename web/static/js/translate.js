@@ -15,6 +15,7 @@
 
   var outputPanel = document.getElementById("output-panel");
   var failureBanner = document.getElementById("failure-banner");
+  var failureReason = document.getElementById("failure-reason");
   var outputText = document.getElementById("output-text");
   var saveBtn = document.getElementById("save-btn");
   var saveStatus = document.getElementById("save-status");
@@ -64,9 +65,20 @@
 
   function fetchJson(url, options) {
     return fetch(url, options).then(function (res) {
-      return res.json().then(function (data) {
-        return { ok: res.ok, status: res.status, data: data };
-      });
+      // A proxy error page or timeout from Railway's edge isn't JSON -
+      // report the HTTP status instead of a cryptic parse error.
+      return res.json().then(
+        function (data) {
+          return { ok: res.ok, status: res.status, data: data };
+        },
+        function () {
+          return {
+            ok: false,
+            status: res.status,
+            data: { error: "Server returned an unexpected response (HTTP " + res.status + ")." },
+          };
+        }
+      );
     });
   }
 
@@ -139,6 +151,9 @@
             outputPanel.hidden = false;
             outputText.value = job.preview_text || "";
             failureBanner.hidden = !job.has_failures;
+            failureReason.textContent = job.last_chunk_error
+              ? "Last error: " + job.last_chunk_error
+              : "";
           } else if (job.status === "error") {
             window.clearInterval(pollTimer);
             showError(job.error || "Translation failed.");
