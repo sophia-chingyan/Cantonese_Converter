@@ -34,7 +34,7 @@ that first output.
 
 ```
 extractors/    input parsing - pasted text, .txt, .srt, .docx, .pdf
-translator/    provider clients (Poe, Gemini), chunker, prompt builder
+translator/    provider clients (Poe, Gemini, OpenRouter), chunker, prompt builder
 writers/       output formatting - .txt, .srt
 auth/          Google OAuth, single-email allowlist
 jobs/          in-memory job tracking + background translation runner
@@ -71,7 +71,27 @@ In [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
 - **Gemini** (session-switchable alternative, R10): create a key at
   [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
 
-Both keys can be set even if you only plan to use one - the dropdown
+- **OpenRouter**: create a key at
+  [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys).
+  Set `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` (an exact text/chat model
+  ID from [the model catalog](https://openrouter.ai/models), including the
+  provider prefix). No model is silently chosen for you. Set
+  `DEFAULT_PROVIDER=openrouter` to preselect it for new sessions.
+  Existing sessions can choose OpenRouter from the Provider dropdown.
+
+All provider keys are server-side environment variables; users select a
+provider on the page, without entering or receiving API keys. OpenRouter
+uses the same prompts, chunking, context carryover, retries, and file
+handling as the existing providers. Charges go to the configured
+OpenRouter account. Test a short paragraph to check 粵文 quality before
+converting a whole document. Missing OpenRouter settings are reported
+before a translation job starts.
+
+On Railway, add `OPENROUTER_API_KEY` and `OPENROUTER_MODEL` in the service's
+Variables and redeploy with this version of the code. Optionally set
+`DEFAULT_PROVIDER=openrouter`. Poe and Gemini remain available.
+
+All three keys can be set even if you only plan to use one - the dropdown
 on the translate page switches between them per session without a
 redeploy.
 
@@ -160,7 +180,7 @@ Per spec section 4, out of scope for this version:
   `FILE_RETENTION_COUNT` most recent files.
 - No multi-user support - one Google account, set by `ALLOWED_EMAIL`.
 - The Custom API endpoint option (D8) is deferred - the provider
-  dropdown currently offers Poe and Gemini only.
+  dropdown offers Poe, Gemini, and OpenRouter.
 
 ## If a translation job gets interrupted
 

@@ -68,6 +68,10 @@ class Config:
     )
     GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite")
 
+    # OpenRouter: choose an explicit model ID from openrouter.ai/models.
+    OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "").strip()
+
     # D1: default provider selected when a session has not chosen one yet.
     DEFAULT_PROVIDER = os.environ.get("DEFAULT_PROVIDER", "poe")
 
