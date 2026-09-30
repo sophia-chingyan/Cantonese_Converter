@@ -1,8 +1,9 @@
 from .base import TranslatorClient
 from .poe_client import PoeClient
 from .gemini_client import GeminiClient
+from .openrouter_client import OpenRouterClient
 
-PROVIDERS = ("poe", "gemini")  # D8's Custom option is deferred, not in v1.0
+PROVIDERS = ("poe", "gemini", "openrouter")  # D8's Custom option is deferred, not in v1.0
 
 
 def get_client(provider: str, config) -> TranslatorClient:
@@ -19,5 +20,10 @@ def get_client(provider: str, config) -> TranslatorClient:
             api_key=config["GEMINI_API_KEY"],
             base_url=config["GEMINI_BASE_URL"],
             model=config["GEMINI_MODEL"],
+        )
+    if provider == "openrouter":
+        return OpenRouterClient(
+            api_key=config["OPENROUTER_API_KEY"],
+            model=config["OPENROUTER_MODEL"],
         )
     raise ValueError(f"Unknown provider '{provider}'. Expected one of {PROVIDERS}.")
