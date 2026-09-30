@@ -17,7 +17,7 @@ from werkzeug.utils import secure_filename
 from auth import complete_login, login_required, logout, oauth
 from extractors import ExtractionError, extract_pasted_text, extract_upload
 from jobs import registry, start_job
-from translator import PROVIDERS
+from translator import PROVIDER_LABELS, PROVIDERS, missing_settings
 from writers import output_extension_for
 
 bp = Blueprint("web", __name__, template_folder="templates", static_folder="static")
@@ -77,15 +77,26 @@ def healthz():
 # Translate page
 # --------------------------------------------------------------------------
 
+def _default_provider():
+    """DEFAULT_PROVIDER from the environment, falling back to the first
+    provider if it's set to something the app doesn't know."""
+    default = current_app.config["DEFAULT_PROVIDER"]
+    return default if default in PROVIDERS else PROVIDERS[0]
+
+
 @bp.route("/translate")
 @login_required
 def translate_page():
-    provider = session.get("provider", current_app.config["DEFAULT_PROVIDER"])
-    labels = {
-        p: f"{ {'poe': 'Poe', 'gemini': 'Gemini', 'openrouter': 'OpenRouter'}[p]} "
-           f"({current_app.config[p.upper() + '_MODEL'] or 'model not configured'})"
-        for p in PROVIDERS
-    }
+    provider = session.get("provider")
+    if provider not in PROVIDERS:
+        provider = _default_provider()
+    labels = {}
+    for p in PROVIDERS:
+        model = current_app.config.get(p.upper() + "_MODEL") or "model not configured"
+        label = f"{PROVIDER_LABELS[p]} ({model})"
+        if missing_settings(p, current_app.config):
+            label += " - not configured"
+        labels[p] = label
     return render_template("translate.html", provider=provider, providers=PROVIDERS,
                            provider_labels=labels)
 
@@ -93,14 +104,15 @@ def translate_page():
 @bp.route("/api/translate", methods=["POST"])
 @login_required
 def api_translate():
-    provider = request.form.get("provider", current_app.config["DEFAULT_PROVIDER"])
+    provider = request.form.get("provider") or _default_provider()
     if provider not in PROVIDERS:
         return jsonify({"error": f"Unknown provider '{provider}'."}), 400
-    if provider == "openrouter":
-        missing = [name for name in ("OPENROUTER_API_KEY", "OPENROUTER_MODEL")
-                   if not current_app.config.get(name, "").strip()]
-        if missing:
-            return jsonify({"error": "OpenRouter is not configured. Set " + ", ".join(missing) + "."}), 400
+    missing = missing_settings(provider, current_app.config)
+    if missing:
+        return jsonify({
+            "error": f"{PROVIDER_LABELS[provider]} is not configured. "
+                     f"Set {', '.join(missing)} in the Railway service variables."
+        }), 400
     session["provider"] = provider
 
     uploaded = request.files.get("file")

@@ -19,12 +19,14 @@ class GeminiClient(TranslatorClient):
             raise TranslatorError("GEMINI_API_KEY is not configured.")
 
         url = f"{self.base_url}/models/{self.model}:generateContent"
-        params = {"key": self.api_key}
+        # Header rather than ?key= so the key never appears in a URL that
+        # could end up in an exception message or log line.
+        headers = {"x-goog-api-key": self.api_key}
         payload = {
             "contents": [{"role": "user", "parts": [{"text": prompt}]}],
         }
 
-        response = requests.post(url, params=params, json=payload, timeout=self.timeout)
+        response = requests.post(url, headers=headers, json=payload, timeout=self.timeout)
         if response.status_code != 200:
             raise TranslatorError(
                 f"Gemini API returned HTTP {response.status_code}: {response.text[:300]}"
