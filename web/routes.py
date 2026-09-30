@@ -81,7 +81,13 @@ def healthz():
 @login_required
 def translate_page():
     provider = session.get("provider", current_app.config["DEFAULT_PROVIDER"])
-    return render_template("translate.html", provider=provider, providers=PROVIDERS)
+    labels = {
+        p: f"{ {'poe': 'Poe', 'gemini': 'Gemini', 'openrouter': 'OpenRouter'}[p]} "
+           f"({current_app.config[p.upper() + '_MODEL'] or 'model not configured'})"
+        for p in PROVIDERS
+    }
+    return render_template("translate.html", provider=provider, providers=PROVIDERS,
+                           provider_labels=labels)
 
 
 @bp.route("/api/translate", methods=["POST"])
@@ -90,6 +96,11 @@ def api_translate():
     provider = request.form.get("provider", current_app.config["DEFAULT_PROVIDER"])
     if provider not in PROVIDERS:
         return jsonify({"error": f"Unknown provider '{provider}'."}), 400
+    if provider == "openrouter":
+        missing = [name for name in ("OPENROUTER_API_KEY", "OPENROUTER_MODEL")
+                   if not current_app.config.get(name, "").strip()]
+        if missing:
+            return jsonify({"error": "OpenRouter is not configured. Set " + ", ".join(missing) + "."}), 400
     session["provider"] = provider
 
     uploaded = request.files.get("file")
