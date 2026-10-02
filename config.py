@@ -59,7 +59,9 @@ class Config:
     # Poe: OpenAI-compatible endpoint, billed against the user's Poe subscription.
     POE_API_KEY = os.environ.get("POE_API_KEY", "")
     POE_BASE_URL = os.environ.get("POE_BASE_URL", "https://api.poe.com/v1")
-    POE_MODEL = os.environ.get("POE_MODEL", "GPT-5.6-Luna")
+    # Must be a bot ID exactly as listed at https://api.poe.com/v1/models
+    # (lowercase, e.g. "gpt-5.4-mini"); anything else 404s on every chunk.
+    POE_MODEL = os.environ.get("POE_MODEL", "gpt-5.4-mini")
 
     # Gemini: direct Google AI Studio key.
     GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")

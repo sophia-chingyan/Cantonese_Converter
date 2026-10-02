@@ -12,9 +12,10 @@ save it to a file you can download later.
 ## Before anything else: the D1 quality gate
 
 D1 was locked to Poe's `GPT-5.6-Luna` **without running the planned
-four-way comparison** (see spec §9.1). Nobody has published a
-benchmark for sustained 粵文 generation quality, so this can only be
-checked by reading real output.
+four-way comparison** (see spec §9.1). That model ID doesn't exist on
+Poe (the API answers `HTTP 404: Model ... not found`), so the default is
+now `gpt-5.4-mini`. Nobody has published a benchmark for sustained 粵文
+generation quality, so this can only be checked by reading real output.
 
 **The first time you run this app, do exactly this before relying on
 it for anything real:**
@@ -27,8 +28,14 @@ it for anything real:**
 
 If it doesn't hold up, switch the provider dropdown to Gemini and
 re-test, or change `POE_MODEL` in your environment to try a different
-Poe model. Nothing else in the app depends on which model produced
-that first output.
+Poe model (use an ID exactly as listed at
+[api.poe.com/v1/models](https://api.poe.com/v1/models), e.g. `gpt-5.4`
+or `gpt-6.1-sol` for higher quality at higher cost). Nothing else in the
+app depends on which model produced that first output.
+
+If the warning banner says `Model ... not found`, `POE_MODEL` is not a
+valid Poe model ID. On Railway, also check the service's Variables: a
+`POE_MODEL` set there overrides the default in the code.
 
 ## Project layout
 
