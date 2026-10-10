@@ -36,6 +36,7 @@ that first output.
 extractors/    input parsing - pasted text, .txt, .srt, .docx, .pdf
 translator/    provider clients (Poe, Gemini, OpenRouter), chunker, prompt builder
 writers/       output formatting - .txt, .srt
+dictionary/    user dictionary (Dictionary page) - terms the translation must follow
 auth/          Google OAuth, single-email allowlist
 jobs/          in-memory job tracking + background translation runner
 web/           Flask routes, templates, static assets

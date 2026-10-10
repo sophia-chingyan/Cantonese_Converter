@@ -46,6 +46,16 @@ def _default_output_dir() -> str:
     return "storage/outputs"
 
 
+def _default_dictionary_path() -> str:
+    """Same volume logic as _default_output_dir, but deliberately outside
+    OUTPUT_DIR: the Files page lists everything there and D6 retention
+    would eventually delete the dictionary along with old outputs."""
+    volume = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
+    if volume:
+        return os.path.join(volume, "dictionary.json")
+    return "storage/dictionary.json"
+
+
 class Config:
     # --- Auth (Google OAuth, single allowed user) ---
     GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
@@ -89,6 +99,9 @@ class Config:
     # --- File handling ---
     OUTPUT_DIR = os.environ.get("OUTPUT_DIR") or _default_output_dir()
     MAX_UPLOAD_MB = _int_env("MAX_UPLOAD_MB", 10)
+
+    # User dictionary: source terms and the exact 粵文 to use for them.
+    DICTIONARY_PATH = os.environ.get("DICTIONARY_PATH") or _default_dictionary_path()
 
     # D2: chunk target size in characters.
     CHUNK_SIZE_CHARS = _int_env("CHUNK_SIZE_CHARS", 1500)

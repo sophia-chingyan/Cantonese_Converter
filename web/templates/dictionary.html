@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Dictionary · 粵文 Converter{% endblock %}
+{% block content %}
+
+<section class="panel">
+  <div class="panel-head">
+    <p class="eyebrow">自訂詞彙</p>
+    <h1>Dictionary</h1>
+  </div>
+
+  <p class="field-hint">
+    原文出現以下詞彙時，翻譯會優先使用你指定嘅粵語譯法。再加入相同嘅原文詞彙，會更新佢嘅譯法。
+  </p>
+
+  {% with messages = get_flashed_messages() %}
+    {% for message in messages %}
+    <div class="alert alert-error">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form class="dict-form" method="post" action="{{ url_for('web.dictionary_add') }}" autocomplete="off">
+    <div class="field-stack">
+      <label for="dict-source">原文詞彙</label>
+      <input id="dict-source" name="source" type="text" required>
+    </div>
+    <div class="field-stack">
+      <label for="dict-target">粵語翻譯</label>
+      <input id="dict-target" name="target" type="text" required>
+    </div>
+    <button class="btn btn-primary" type="submit">加入 / 更新</button>
+  </form>
+
+  {% if entries %}
+  <table class="ledger">
+    <thead>
+      <tr>
+        <th scope="col">原文詞彙</th>
+        <th scope="col">粵語翻譯</th>
+        <th scope="col"><span class="sr-only">Actions</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for e in entries %}
+      <tr>
+        <td class="ledger-name">{{ e.source }}</td>
+        <td class="ledger-name">{{ e.target }}</td>
+        <td class="ledger-actions">
+          <form method="post" action="{{ url_for('web.dictionary_delete') }}"
+                onsubmit="return confirm('刪除「' + this.source.value + '」？');">
+            <input type="hidden" name="source" value="{{ e.source }}">
+            <button class="btn-link btn-link-danger" type="submit">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="empty-state">
+    詞彙表仲係空嘅。喺上面加入第一個詞彙。
+  </p>
+  {% endif %}
+</section>
+{% endblock %}

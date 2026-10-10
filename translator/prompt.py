@@ -58,6 +58,7 @@ def build_prompt(
     previous_context: Optional[str] = None,
     kind: str = "plain",
     cue_count: Optional[int] = None,
+    glossary: Optional[list] = None,
 ) -> str:
     """D3: when previous_context is given (the tail of the previous
     chunk's translated output), it's included as a style anchor so
@@ -67,11 +68,23 @@ def build_prompt(
     For SRT chunks (kind="srt" with a cue_count), the subtitle rules are
     added on top of the shared preamble: one block per cue, and each block
     kept close to its original in length so the synthesised audio matches
-    the original timing."""
+    the original timing.
+
+    glossary is the user's dictionary entries that occur in this chunk
+    ({"source", "target"} dicts); they override every other rule."""
     parts = [PREAMBLE]
 
     if kind == "srt" and cue_count:
         parts.append(SRT_RULES.format(cue_count=cue_count))
+
+    if glossary:
+        parts.append(
+            "User dictionary - these terms appear in the text below. "
+            "Wherever a source term appears, translate it exactly as the "
+            "dictionary gives it. These take priority over every other "
+            "rule above:\n"
+            + "\n".join(f"{e['source']} \u2192 {e['target']}" for e in glossary)
+        )
 
     if previous_context:
         parts.append(
