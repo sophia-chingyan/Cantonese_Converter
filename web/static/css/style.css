@@ -189,7 +189,7 @@ label {
   margin-bottom: 8px;
 }
 
-select, textarea, input[type="file"] {
+select, textarea, input[type="file"], input[type="text"] {
   width: 100%;
   font-family: var(--font-cjk);
   font-size: 1rem;
@@ -361,6 +361,19 @@ select:focus, textarea:focus, input:focus {
 }
 
 .ledger-name { font-family: var(--font-cjk); }
+.dict-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+.dict-form .field-stack { margin-bottom: 0; }
+
+@media (max-width: 640px) {
+  .dict-form { grid-template-columns: 1fr; }
+}
+
 .ledger-mono { font-family: var(--font-mono); color: var(--ink-soft); white-space: nowrap; }
 .ledger-actions { display: flex; gap: 14px; white-space: nowrap; }
 

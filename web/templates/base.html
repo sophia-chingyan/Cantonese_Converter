@@ -18,6 +18,8 @@
     <nav class="topnav">
       <a href="{{ url_for('web.translate_page') }}"
          class="{{ 'is-active' if request.endpoint == 'web.translate_page' else '' }}">Translate</a>
+      <a href="{{ url_for('web.dictionary_page') }}"
+         class="{{ 'is-active' if request.endpoint == 'web.dictionary_page' else '' }}">Dictionary</a>
       <a href="{{ url_for('web.files_page') }}"
          class="{{ 'is-active' if request.endpoint == 'web.files_page' else '' }}">Files</a>
       <a href="{{ url_for('web.logout_route') }}" class="topnav-logout">Sign out</a>

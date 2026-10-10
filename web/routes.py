@@ -4,6 +4,7 @@ import time
 from flask import (
     Blueprint,
     current_app,
+    flash,
     jsonify,
     redirect,
     render_template,
@@ -15,6 +16,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from auth import complete_login, login_required, logout, oauth
+from dictionary import add_entry, delete_entry, load_entries
 from extractors import ExtractionError, extract_pasted_text, extract_upload
 from jobs import registry, start_job
 from translator import PROVIDER_LABELS, PROVIDERS, missing_settings
@@ -254,3 +256,35 @@ def delete_file(filename):
     if safe_name and os.path.isfile(path):
         os.remove(path)
     return redirect(url_for("web.files_page"))
+
+
+# --------------------------------------------------------------------------
+# Dictionary page
+# --------------------------------------------------------------------------
+
+@bp.route("/dictionary")
+@login_required
+def dictionary_page():
+    entries = load_entries(current_app.config["DICTIONARY_PATH"])
+    return render_template("dictionary.html", entries=entries)
+
+
+@bp.route("/dictionary/add", methods=["POST"])
+@login_required
+def dictionary_add():
+    try:
+        add_entry(
+            current_app.config["DICTIONARY_PATH"],
+            request.form.get("source", ""),
+            request.form.get("target", ""),
+        )
+    except ValueError as exc:
+        flash(str(exc))
+    return redirect(url_for("web.dictionary_page"))
+
+
+@bp.route("/dictionary/delete", methods=["POST"])
+@login_required
+def dictionary_delete():
+    delete_entry(current_app.config["DICTIONARY_PATH"], request.form.get("source", ""))
+    return redirect(url_for("web.dictionary_page"))

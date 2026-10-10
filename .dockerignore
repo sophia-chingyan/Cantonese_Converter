@@ -8,4 +8,5 @@ __pycache__/
 venv/
 .venv/
 storage/outputs/*
+storage/dictionary.json*
 !storage/outputs/.gitkeep

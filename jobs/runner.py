@@ -11,6 +11,7 @@ the previous chunk's translated output.
 import re
 import threading
 
+from dictionary import entries_in_text, load_entries
 from extractors.base import ExtractedDocument
 from translator import (
     build_prompt,
@@ -39,24 +40,29 @@ def start_job(doc: ExtractedDocument, provider: str, config) -> str:
         source_ext=doc.source_ext,
         source_filename=doc.source_filename,
     )
+    # Snapshot the dictionary now, so edits made while the job runs
+    # don't change its wording halfway through.
+    dictionary = load_entries(config["DICTIONARY_PATH"])
 
     thread = threading.Thread(
-        target=_run, args=(job_id, doc, chunks, provider, config), daemon=True
+        target=_run, args=(job_id, doc, chunks, provider, config, dictionary),
+        daemon=True,
     )
     thread.start()
     return job_id
 
 
-def _run(job_id, doc: ExtractedDocument, chunks, provider: str, config) -> None:
+def _run(job_id, doc: ExtractedDocument, chunks, provider: str, config, dictionary) -> None:
     # Any unexpected exception in a background thread would otherwise
     # vanish and leave the browser polling a job stuck on "running".
     try:
-        _translate_all(job_id, doc, chunks, provider, config)
+        _translate_all(job_id, doc, chunks, provider, config, dictionary)
     except Exception as exc:  # noqa: BLE001
         registry.update_job(job_id, status="error", error=f"Translation job failed: {exc}")
 
 
-def _translate_all(job_id, doc: ExtractedDocument, chunks, provider: str, config) -> None:
+def _translate_all(job_id, doc: ExtractedDocument, chunks, provider: str, config,
+                   dictionary) -> None:
     client = get_client(provider, config)
 
     previous_context = None
@@ -71,6 +77,7 @@ def _translate_all(job_id, doc: ExtractedDocument, chunks, provider: str, config
             previous_context,
             kind=chunk.kind,
             cue_count=len(chunk.cues),
+            glossary=entries_in_text(dictionary, source_text),
         )
 
         translated = None
