@@ -154,6 +154,21 @@ the `/healthz` health check, and a single replica.
    Files page survives redeploys. Without one, saved files live in the
    container filesystem and are lost on every deploy — the original
    trade-off below.
+   The Dictionary page uses the same volume (`<mount path>/dictionary.json`).
+6. **Or keep the dictionary in a bucket.** Without a volume, Dictionary
+   entries are wiped on every redeploy (the page shows a warning when
+   that's the case). Instead of a volume you can add a Railway Bucket
+   (project canvas → *Create* → *Bucket*) and set these service
+   variables, replacing `MyBucket` with the bucket's name:
+   ```
+   S3_ENDPOINT=${{MyBucket.ENDPOINT}}
+   S3_BUCKET=${{MyBucket.BUCKET}}
+   S3_REGION=${{MyBucket.REGION}}
+   S3_ACCESS_KEY_ID=${{MyBucket.ACCESS_KEY_ID}}
+   S3_SECRET_ACCESS_KEY=${{MyBucket.SECRET_ACCESS_KEY}}
+   ```
+   With those set the dictionary is stored as `dictionary.json` in the
+   bucket and survives redeploys.
 
 ### Railway specifics worth knowing
 

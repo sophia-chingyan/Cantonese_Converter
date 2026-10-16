@@ -103,6 +103,24 @@ class Config:
     # User dictionary: source terms and the exact 粵文 to use for them.
     DICTIONARY_PATH = os.environ.get("DICTIONARY_PATH") or _default_dictionary_path()
 
+    # Optional S3-compatible bucket (e.g. a Railway Bucket) for the
+    # dictionary. When all four of endpoint/bucket/key/secret are set it
+    # takes precedence over DICTIONARY_PATH, so entries survive redeploys
+    # without a volume. On Railway, reference the bucket's own variables,
+    # e.g. S3_BUCKET=${{MyBucket.BUCKET}}.
+    S3_ENDPOINT = os.environ.get("S3_ENDPOINT", "").strip()
+    S3_BUCKET = os.environ.get("S3_BUCKET", "").strip()
+    S3_REGION = os.environ.get("S3_REGION", "").strip()
+    S3_ACCESS_KEY_ID = os.environ.get("S3_ACCESS_KEY_ID", "").strip()
+    S3_SECRET_ACCESS_KEY = os.environ.get("S3_SECRET_ACCESS_KEY", "").strip()
+    # "virtual" (bucket in the hostname, what Railway Buckets use) or "path".
+    S3_URL_STYLE = os.environ.get("S3_URL_STYLE", "").strip().lower() or "virtual"
+
+    # Exposed so the Dictionary page can warn when entries would be lost
+    # on the next redeploy.
+    ON_RAILWAY = ON_RAILWAY
+    RAILWAY_VOLUME_MOUNT_PATH = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
+
     # D2: chunk target size in characters.
     CHUNK_SIZE_CHARS = _int_env("CHUNK_SIZE_CHARS", 1500)
 

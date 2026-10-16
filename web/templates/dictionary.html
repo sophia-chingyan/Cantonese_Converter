@@ -12,6 +12,12 @@
     原文出現以下詞彙時，翻譯會優先使用你指定嘅粵語譯法。再加入相同嘅原文詞彙，會更新佢嘅譯法。
   </p>
 
+  {% if not persistent %}
+  <div class="alert alert-error">
+    詞彙表而家存喺容器入面，下次 redeploy 會清空。請喺 Railway 加一個 Bucket（設定 S3_* 變數）或者掛一個 Volume，詳見 README。
+  </div>
+  {% endif %}
+
   {% with messages = get_flashed_messages() %}
     {% for message in messages %}
     <div class="alert alert-error">{{ message }}</div>

@@ -16,7 +16,7 @@ from flask import (
 from werkzeug.utils import secure_filename
 
 from auth import complete_login, login_required, logout, oauth
-from dictionary import add_entry, delete_entry, load_entries
+from dictionary import add_entry, delete_entry, load_entries, storage_is_persistent
 from extractors import ExtractionError, extract_pasted_text, extract_upload
 from jobs import registry, start_job
 from translator import PROVIDER_LABELS, PROVIDERS, missing_settings
@@ -265,8 +265,12 @@ def delete_file(filename):
 @bp.route("/dictionary")
 @login_required
 def dictionary_page():
-    entries = load_entries(current_app.config["DICTIONARY_PATH"])
-    return render_template("dictionary.html", entries=entries)
+    entries = load_entries(current_app.config)
+    return render_template(
+        "dictionary.html",
+        entries=entries,
+        persistent=storage_is_persistent(current_app.config),
+    )
 
 
 @bp.route("/dictionary/add", methods=["POST"])
@@ -274,17 +278,22 @@ def dictionary_page():
 def dictionary_add():
     try:
         add_entry(
-            current_app.config["DICTIONARY_PATH"],
+            current_app.config,
             request.form.get("source", ""),
             request.form.get("target", ""),
         )
     except ValueError as exc:
         flash(str(exc))
+    except Exception as exc:  # noqa: BLE001 - storage unreachable
+        flash(f"Could not save the dictionary: {exc}")
     return redirect(url_for("web.dictionary_page"))
 
 
 @bp.route("/dictionary/delete", methods=["POST"])
 @login_required
 def dictionary_delete():
-    delete_entry(current_app.config["DICTIONARY_PATH"], request.form.get("source", ""))
+    try:
+        delete_entry(current_app.config, request.form.get("source", ""))
+    except Exception as exc:  # noqa: BLE001 - storage unreachable
+        flash(f"Could not save the dictionary: {exc}")
     return redirect(url_for("web.dictionary_page"))
