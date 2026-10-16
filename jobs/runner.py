@@ -42,7 +42,7 @@ def start_job(doc: ExtractedDocument, provider: str, config) -> str:
     )
     # Snapshot the dictionary now, so edits made while the job runs
     # don't change its wording halfway through.
-    dictionary = load_entries(config["DICTIONARY_PATH"])
+    dictionary = load_entries(config)
 
     thread = threading.Thread(
         target=_run, args=(job_id, doc, chunks, provider, config, dictionary),
