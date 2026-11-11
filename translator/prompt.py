@@ -28,6 +28,9 @@ PREAMBLE = (
     "summarise or explain anything. Every idea in the source must appear "
     "in the translation, and nothing that is not in the source may be "
     "added.\n"
+    "- Translate every sentence, one by one, from the first to the last. "
+    "Never skip a sentence, even if it is short, repeats an earlier idea, "
+    "is a quotation, a heading or a list item, or seems unimportant.\n"
     "- Return ONLY the translated text. No explanations, no notes, no "
     "commentary, no markdown formatting, no restating the instructions."
 )
@@ -59,6 +62,7 @@ def build_prompt(
     kind: str = "plain",
     cue_count: Optional[int] = None,
     glossary: Optional[list] = None,
+    paragraph_count: Optional[int] = None,
 ) -> str:
     """D3: when previous_context is given (the tail of the previous
     chunk's translated output), it's included as a style anchor so
@@ -69,6 +73,9 @@ def build_prompt(
     added on top of the shared preamble: one block per cue, and each block
     kept close to its original in length so the synthesised audio matches
     the original timing.
+
+    paragraph_count (plain chunks) states how many paragraphs the
+    model must return, which makes a skipped paragraph less likely.
 
     glossary is the user's dictionary entries that occur in this chunk
     ({"source", "target"} dicts); they override every other rule."""
@@ -91,6 +98,13 @@ def build_prompt(
             "For style consistency, here is the end of the previously "
             "translated section (reference only - do not repeat it in "
             "your answer):\n" + previous_context
+        )
+
+    if kind != "srt" and paragraph_count and paragraph_count > 1:
+        parts.append(
+            f"The text below has {paragraph_count} paragraphs. Return all "
+            f"{paragraph_count} paragraphs, in the same order, separated by "
+            "a blank line, each one translated in full."
         )
 
     parts.append("Now translate the following text:\n" + text)
