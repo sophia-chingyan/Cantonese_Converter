@@ -8,7 +8,7 @@ class GeminiClient(TranslatorClient):
 
     name = "gemini"
 
-    def __init__(self, api_key: str, base_url: str, model: str, timeout: int = 60):
+    def __init__(self, api_key: str, base_url: str, model: str, timeout: int = 120):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.model = model
@@ -35,8 +35,17 @@ class GeminiClient(TranslatorClient):
         data = response.json()
         try:
             candidate = data["candidates"][0]
+            finish_reason = candidate.get("finishReason")
+            # Anything but STOP means the answer was cut short (MAX_TOKENS)
+            # or withheld (SAFETY, RECITATION...). Accepting it would
+            # silently drop the rest of the chunk, so fail and retry.
+            if finish_reason and finish_reason != "STOP":
+                raise TranslatorError(
+                    f"Gemini returned an incomplete translation (finishReason={finish_reason})."
+                )
             parts = candidate["content"]["parts"]
-            return "".join(p.get("text", "") for p in parts)
+            # Skip thought summaries if a thinking model includes them.
+            return "".join(p.get("text", "") for p in parts if not p.get("thought"))
         except (KeyError, IndexError, TypeError) as exc:
             # A candidate can also be blocked by safety filters, in which
             # case "content" is absent entirely - surface that clearly.

@@ -37,6 +37,12 @@ class PoeClient(TranslatorClient):
 
         data = response.json()
         try:
-            return data["choices"][0]["message"]["content"]
+            choice = data["choices"][0]
+            # "length" means the answer was cut off mid-chunk.
+            if choice.get("finish_reason") in ("length", "content_filter"):
+                raise TranslatorError(
+                    f"Poe returned an incomplete translation (finish_reason={choice.get('finish_reason')})."
+                )
+            return choice["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
             raise TranslatorError(f"Unexpected Poe API response shape: {data}") from exc
