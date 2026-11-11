@@ -14,6 +14,22 @@ handing them over, using the one clue the layout leaves behind - a
 wrapped line runs to the right margin, the last line of a paragraph
 stops short of it (_ends_paragraph below).
 
+Vertical (直排) pages need a different reflow. pypdf reads a vertical
+column glyph by glyph and emits a newline after every character, so a
+page of 直排 text arrives as hundreds of one-character "lines", and the
+margin heuristic would turn each character into its own paragraph -
+which is exactly what the translated .txt ended up looking like. Such
+pages are detected (_is_vertical_page) and handled by
+_reflow_vertical_page instead: the characters are joined back up, and
+the layout's own paragraph marker - the full-width indent that opens
+every paragraph - is used to split paragraphs.
+
+Vertical text also uses its own punctuation glyphs (︵︶﹁﹂ etc.) and
+some PDFs encode common ideographs as Kangxi radical code points
+(⾃ for 自). Both are mapped back to their normal forms
+(normalize_cjk_text) so the translator and the output file see
+ordinary 「」（）and ordinary characters.
+
 Scans are the known limitation: a photographed page has no text layer
 at all, so there is nothing to extract and the user is told to OCR it
 first rather than being handed an empty translation.
@@ -22,6 +38,7 @@ from __future__ import annotations
 
 import io
 import re
+import unicodedata
 from typing import List, Optional
 
 from .base import Extractor, ExtractedDocument, ExtractionError
@@ -35,12 +52,61 @@ _WIDE_RE = re.compile(
 )
 
 # A line that is nothing but a page number, optionally dressed up as
-# "- 12 -" or "(iv)". Only stripped at the top and bottom of a page,
-# where running headers and footers live.
+# "- 12 -" or "(iv)" (full-width digits included). Only stripped at the
+# top and bottom of a page, where running headers and footers live.
 _PAGE_FURNITURE_RE = re.compile(
-    r"^[\s\-–—(\[]*(?:\d{1,4}|[ivxlcdm]{1,7})[\s\-–—)\]]*$",
+    r"^[\s\-–—(\[]*(?:[0-9０-９]{1,4}|[ivxlcdm]{1,7})[\s\-–—)\]]*$",
     re.IGNORECASE,
 )
+
+# Vertical-writing presentation forms (U+FE10-FE19, U+FE30-FE4F) mapped
+# to the horizontal punctuation they stand for. Explicit rather than
+# NFKC, because NFKC turns ︵ into an ASCII "(" instead of "（".
+_VERTICAL_PUNCT = str.maketrans({
+    "︐": "，", "︑": "、", "︒": "。", "︓": "：", "︔": "；",
+    "︕": "！", "︖": "？", "︗": "〖", "︘": "〗", "︙": "…",
+    "︰": "‥", "︱": "—", "︲": "–", "︳": "_", "︴": "_",
+    "︵": "（", "︶": "）", "︷": "｛", "︸": "｝", "︹": "〔", "︺": "〕",
+    "︻": "【", "︼": "】", "︽": "《", "︾": "》", "︿": "〈", "﹀": "〉",
+    "﹁": "「", "﹂": "」", "﹃": "『", "﹄": "』", "﹇": "［", "﹈": "］",
+})
+
+# Kangxi Radicals. Some PDF fonts map ordinary ideographs to these
+# look-alike code points (⾃ U+2F83 for 自 U+81EA); NFKC folds them back.
+_KANGXI_RE = re.compile(r"[⼀-⿟]")
+
+# CJK Radicals Supplement forms that such fonts use for whole
+# characters. NFKC leaves these alone, so they are listed explicitly.
+# Bare radicals like ⺅ are kept: a text may be talking about the radical.
+_RADICAL_SUPPLEMENT = str.maketrans({
+    "⻑": "長", "⻄": "西", "⻝": "食", "⻘": "青", "⻩": "黃",
+    "⻆": "角", "⻤": "鬼", "⺟": "母", "⻳": "龜",
+})
+
+# Whitespace that a vertical layout leaves between a CJK character and
+# a rotated dash or ellipsis ("人 ──"). Latin "word — word" is left alone.
+_SPACE_BEFORE_DASH_RE = re.compile(r"(?<=[一-鿿㐀-䶿])\s+(?=[─—…‥])")
+
+# Punctuation that can close a paragraph in Chinese text. Used to tell
+# a heading glued onto the end of the previous paragraph apart from the
+# paragraph itself (see _split_trailing_heading).
+_PARAGRAPH_END_CHARS = "。！？…」』）”’：；"
+_PUNCT_RE = re.compile(r"[，。、！？：；「」『』（）《》〈〉“”‘’…—─,.!?:;()\"']")
+
+# A heading in vertical layout is at most this many characters.
+_MAX_HEADING_LEN = 25
+
+# A page is treated as vertical text when at least this share of its
+# non-blank lines are a single character.
+_VERTICAL_LINE_SHARE = 0.6
+_VERTICAL_MIN_LINES = 8
+
+
+def normalize_cjk_text(text: str) -> str:
+    """Map vertical punctuation and Kangxi radical code points back to
+    their ordinary forms."""
+    text = text.translate(_VERTICAL_PUNCT).translate(_RADICAL_SUPPLEMENT)
+    return _KANGXI_RE.sub(lambda m: unicodedata.normalize("NFKC", m.group()), text)
 
 # A Latin word broken across a line break with a hyphen.
 _HYPHEN_BREAK_RE = re.compile(r"[A-Za-z]-$")
@@ -99,6 +165,63 @@ def _page_lines(page_text: str) -> List[str]:
     return lines
 
 
+def _is_vertical_page(page_text: str) -> bool:
+    """True if this page looks like 直排 text dumped one glyph per line."""
+    lines = [ln.strip() for ln in page_text.split("\n")]
+    lines = [ln for ln in lines if ln]
+    if len(lines) < _VERTICAL_MIN_LINES:
+        return False
+    single = sum(1 for ln in lines if len(ln) == 1)
+    return single >= len(lines) * _VERTICAL_LINE_SHARE
+
+
+def _split_trailing_heading(paragraph: str) -> List[str]:
+    """Split off a heading that the vertical reflow glued onto the end
+    of the previous paragraph.
+
+    In 直排 layout a section heading sits in its own column right after
+    the last column of the previous paragraph, and the only marker
+    pypdf keeps is the indent that opens the *next* paragraph. So
+    "...迷失。你認為自己是誰" arrives as one run. Body paragraphs end
+    with sentence punctuation; a short punctuation-free tail after the
+    last one is a heading.
+    """
+    last_end = max(paragraph.rfind(ch) for ch in _PARAGRAPH_END_CHARS)
+    if last_end < 0:
+        return [paragraph]
+    head, tail = paragraph[: last_end + 1], paragraph[last_end + 1 :].strip()
+    if tail and len(tail) <= _MAX_HEADING_LEN and not _PUNCT_RE.search(tail):
+        return [head, tail]
+    return [paragraph]
+
+
+def _reflow_vertical_page(page_text: str, buffered: str, paragraphs: List[str]) -> str:
+    """Rejoin one vertical page, appending finished paragraphs to
+    `paragraphs`. Returns the paragraph still open at the end of the
+    page, so it can continue on the next one."""
+    lines = page_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+    # Page numbers sit at the head or foot of the dump.
+    while lines and (not lines[0] or _PAGE_FURNITURE_RE.match(lines[0])):
+        lines.pop(0)
+    while lines and (not lines[-1] or _PAGE_FURNITURE_RE.match(lines[-1])):
+        lines.pop()
+
+    for raw in lines:
+        if not raw:
+            # pypdf's own separator between glyphs - not a break.
+            continue
+        line = raw.strip()
+        if not line:
+            # A line of only (full-width) spaces is the indent that opens
+            # a new paragraph - the one break the layout keeps.
+            if buffered:
+                paragraphs.extend(_split_trailing_heading(buffered))
+                buffered = ""
+            continue
+        buffered = _join_lines(buffered, line)
+    return buffered
+
+
 def reflow_pages(pages: List[str]) -> List[str]:
     """Turn per-page line dumps back into paragraphs.
 
@@ -109,6 +232,11 @@ def reflow_pages(pages: List[str]) -> List[str]:
     buffered = ""
 
     for page_text in pages:
+        page_text = normalize_cjk_text(page_text)
+        if _is_vertical_page(page_text):
+            buffered = _reflow_vertical_page(page_text, buffered, paragraphs)
+            continue
+
         lines = _page_lines(page_text)
         if not lines:
             continue
@@ -130,6 +258,7 @@ def reflow_pages(pages: List[str]) -> List[str]:
     if buffered:
         paragraphs.append(buffered)
 
+    paragraphs = [_SPACE_BEFORE_DASH_RE.sub("", p) for p in paragraphs]
     return [p for p in (para.strip() for para in paragraphs) if p]
 
 
